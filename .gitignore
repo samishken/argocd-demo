@@ -1,0 +1,68 @@
+# macOS
+.DS_Store
+
+# Editor directories and files
+.vscode/
+.idea/
+*.iml
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+
+# Terraform
+.terraform*
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+terraform.tfvars
+
+# Kubernetes / Minikube / kubectl
+.minikube/
+.kube/
+.kubeconfig
+kubeconfig
+kubeconfig.*
+*.kube
+kubectl-debug.log
+
+# Argo / CI / secrets
+secrets.yml
+*.secret
+.env
+.env.local
+.env.*.local
+
+# Build / output
+dist/
+build/
+coverage/
+*.log
+
+# macOS Finder
+Icon\r
+
+# OS generated files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Misc
+*.swp
+*~
+
+# Local minikube/kind/docker runtime files
+*.iso
+*.pid
+
