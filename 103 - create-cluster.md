@@ -173,3 +173,8 @@ terraform apply -auto-approve
 aws eks update-kubeconfig --region us-east-1 --name argocd-cluster
 kubectl get nodes -A
 ```
+5. Delete cluster
+```
+aws eks delete-cluster --region us-east-1 --name argocd-cluster
+kubectl get nodes -A
+```

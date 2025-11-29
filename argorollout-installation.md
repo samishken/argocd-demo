@@ -1,4 +1,4 @@
-## Install Argo Roll out
+## Install Argo Rollout
 1.  create namespace for argo- rollouts
 ```
 kubectl create namespace argo-rollouts
