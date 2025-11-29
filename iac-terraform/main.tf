@@ -1,29 +1,11 @@
 # Configure the AWS provider
 provider "aws" {
-  region = "us-east-1"
-}
-
-# Data source to fetch the default VPC
-data "aws_vpc" "default" {
-  default = true
-}
-
-# Data source to fetch subnets in specific availability zones (us-east-1a and us-east-1b)
-data "aws_subnets" "default" {
-  filter {
-    name   = "vpc-id"
-    values = [data.aws_vpc.default.id]
-  }
-
-  filter {
-    name   = "availability-zone"
-    values = ["us-east-1a", "us-east-1b"]
-  }
+  region = var.aws_region
 }
 
 # Create IAM role for EKS cluster
 resource "aws_iam_role" "eks_cluster_role" {
-  name = "eks-cluster-role"
+  name = "${var.project_name}-cluster-role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -37,6 +19,8 @@ resource "aws_iam_role" "eks_cluster_role" {
       }
     ]
   })
+
+  tags = var.tags
 }
 
 # Attach the AmazonEKSClusterPolicy to the EKS cluster role
@@ -47,12 +31,23 @@ resource "aws_iam_role_policy_attachment" "eks_cluster_policy" {
 
 # Create the EKS cluster
 resource "aws_eks_cluster" "argocd" {
-  name     = "argocd-cluster"
-  role_arn = aws_iam_role.eks_cluster_role.arn
+  name            = var.cluster_name
+  role_arn        = aws_iam_role.eks_cluster_role.arn
+  version         = var.cluster_version
 
   vpc_config {
-    subnet_ids = data.aws_subnets.default.ids
+    subnet_ids              = [aws_subnet.public_subnet_1.id, aws_subnet.public_subnet_2.id, aws_subnet.private_subnet_1.id, aws_subnet.private_subnet_2.id]
+    security_group_ids      = [aws_security_group.eks_cluster_sg.id]
+    endpoint_private_access = true
+    endpoint_public_access  = true
   }
+
+  tags = merge(
+    var.tags,
+    {
+      Name = var.cluster_name
+    }
+  )
 
   # Ensure that IAM role permissions are created before and deleted after EKS cluster handling
   depends_on = [
@@ -62,7 +57,7 @@ resource "aws_eks_cluster" "argocd" {
 
 # Create IAM role for EKS node group
 resource "aws_iam_role" "eks_node_group_role" {
-  name = "eks-node-group-role"
+  name = "${var.project_name}-node-group-role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -76,6 +71,8 @@ resource "aws_iam_role" "eks_node_group_role" {
       }
     ]
   })
+
+  tags = var.tags
 }
 
 # Attach policies to the node group role
@@ -97,31 +94,28 @@ resource "aws_iam_role_policy_attachment" "ec2_container_registry_readonly" {
 # Create EKS node group
 resource "aws_eks_node_group" "argocd_node_group" {
   cluster_name    = aws_eks_cluster.argocd.name
-  node_group_name = "argocd-node-group"
+  node_group_name = var.node_group_name
   node_role_arn   = aws_iam_role.eks_node_group_role.arn
-  subnet_ids      = data.aws_subnets.default.ids
+  subnet_ids      = [aws_subnet.private_subnet_1.id, aws_subnet.private_subnet_2.id]
 
   scaling_config {
-    desired_size = 2
-    max_size     = 3
-    min_size     = 1
+    desired_size = var.node_desired_size
+    max_size     = var.node_max_size
+    min_size     = var.node_min_size
   }
 
-  instance_types = ["t3.medium"]
+  instance_types = var.node_instance_types
+
+  tags = merge(
+    var.tags,
+    {
+      Name = var.node_group_name
+    }
+  )
 
   depends_on = [
     aws_iam_role_policy_attachment.eks_worker_node_policy,
     aws_iam_role_policy_attachment.eks_cni_policy,
     aws_iam_role_policy_attachment.ec2_container_registry_readonly
   ]
-}
-
-# Output the EKS cluster endpoint
-output "cluster_endpoint" {
-  value = aws_eks_cluster.argocd.endpoint
-}
-
-# Output the cluster name
-output "cluster_name" {
-  value = aws_eks_cluster.argocd.name
 }
